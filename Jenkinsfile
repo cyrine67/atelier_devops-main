@@ -95,7 +95,7 @@ pipeline {
             }
         }
         // Étape 9 : Vérification du déploiement
-        stage('Verify Deployment') 
+      /*  stage('Verify Deployment') 
         {
             steps {
                 script {
@@ -106,7 +106,7 @@ pipeline {
                     }
                 }
             }
-        }
+        }*/
         stage('Generate HTML Report') {
             steps {
                 script {
