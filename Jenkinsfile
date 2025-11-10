@@ -142,33 +142,45 @@ pipeline {
                 }
             }
         }
-        stage('Email Notification') {
-            steps {
-                echo 'Preparing email notification...'
-            }
-            post {
-                always {
-                    script {
-                        // Send email based on build status
-                        emailext (
-                            subject: "Pipeline ${currentBuild.result ?: 'SUCCESS'} - ${env.JOB_NAME} #${BUILD_NUMBER}",
-                            body: """
-                            <h2>Pipeline Build Report</h2>
-                            <p><strong>Project:</strong> ${env.JOB_NAME}</p>
-                            <p><strong>Build Number:</strong> ${BUILD_NUMBER}</p>
-                            <p><strong>Status:</strong> ${currentBuild.result ?: 'SUCCESS'}</p>
-                            <p><strong>Duration:</strong> ${currentBuild.durationString}</p>
-                            <p><strong>URL:</strong> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
-                            <br/>
-                            <p>Check the detailed HTML report in Jenkins for more information.</p>
-                            """,
-                            to: "cirin.chalghoumi@gmail.com",  // Change this email
-                            attachLog: false
-                        )
-                    }
-                }
-            }
-        } 
+
    }
-    
+     // Étape 10 : Send Email
+        post {
+        success {
+            mail to: 'cirin.chalghoumi@gmail.com',
+                subject: "SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER} Completed",
+                body: """
+                Build Successfully Completed!
+
+                Job Name: ${env.JOB_NAME}
+                Build Number: #${env.BUILD_NUMBER}
+                Build Duration: ${currentBuild.durationString}
+                
+                Console Output: ${env.BUILD_URL}console
+                Build Details: ${env.BUILD_URL}
+                
+                All tests passed and artifacts were successfully deployed.
+                """
+        }
+        failure {
+            mail to: 'cirin.chalghoumi@gmail.com',
+                subject: "URGENT: ${env.JOB_NAME} #${env.BUILD_NUMBER} Failed",
+                body: """
+                BUILD FAILURE ALERT!
+
+                Job Name: ${env.JOB_NAME}
+                Build Number: #${env.BUILD_NUMBER}
+                Build Duration: ${currentBuild.durationString}
+                
+                Error Location: ${env.BUILD_URL}console
+                Build Details: ${env.BUILD_URL}
+                
+                Immediate Action Required:
+                1. Review console output for errors
+                2. Check recent code changes
+                3. Verify dependency services
+                4. Re-run build after fixes
+                """
+        }
+        }
 }
