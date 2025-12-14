@@ -26,20 +26,33 @@ pipeline {
             }
         }
 
-        stage('SCA - Trivy File Scan') {
+       stage('SCA - Trivy File Scan') {
             steps {
                 script {
-                    echo "🛡️ Running Trivy FS Scan..."
-                    // 1. JSON Report
-                    sh 'trivy fs --format json --output trivy-report.json .'
+                    echo "🛡️ Installing and Running Trivy (Low Bandwidth Mode)..."
                     
-                    // 2. Text Report
-                    sh 'trivy fs --format table --output trivy-report.txt .'
+                    // 1. Download Trivy Binary (This is small, ~10MB)
+                    sh 'curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b .'
+                    
+                    // 2. Run Trivy with Timeout and Amazon Mirror
+                    // --timeout 20m: Gives it 20 minutes instead of the default 5.
+                    // --db-repository: Uses Amazon's server which is often more stable than GitHub's.
+                    // --skip-db-update: IF you have a DB from a previous run, this skips the download. 
+                    // (It will ignore this flag automatically if the DB is missing).
+                    
+                    def trivyCmd = "./trivy fs --timeout 20m --db-repository public.ecr.aws/aquasecurity/trivy-db --skip-db-update"
 
-                    // 3. HTML Report (Requires downloading the template first)
+                    // JSON Report
+                    sh "${trivyCmd} --format json --output trivy-report.json ."
+                    
+                    // Text Report
+                    sh "${trivyCmd} --format table --output trivy-report.txt ."
+
+                    // HTML Report
                     sh '''
-                        wget https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl -O html.tpl || true
-                        trivy fs --format template --template "@html.tpl" --output trivy-report.html . || echo "Trivy HTML generation failed"
+                        wget --timeout=60 --tries=3 https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl -O html.tpl || true
+                        
+                        ./trivy fs --timeout 20m --skip-db-update --format template --template "@html.tpl" --output trivy-report.html . || echo "Trivy HTML generation failed"
                     '''
                 }
             }
